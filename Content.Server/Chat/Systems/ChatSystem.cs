@@ -26,6 +26,7 @@ using Content.Shared.Players;
 using Content.Shared.Radio;
 using Robust.Server.Player;
 using Robust.Shared.Audio;
+using Robust.Shared.Audio.Systems;
 using Robust.Shared.Configuration;
 using Robust.Shared.Console;
 using Robust.Shared.Network;
@@ -190,6 +191,9 @@ public sealed partial class ChatSystem : SharedChatSystem
             return;
         }
 
+        if (player != null && !_chatManager.HandleRateLimit(player))
+            return;
+
         // Sus
         if (player?.AttachedEntity is { Valid: true } entity && source != entity)
         {
@@ -277,6 +281,9 @@ public sealed partial class ChatSystem : SharedChatSystem
         if (!CanSendInGame(message, shell, player))
             return;
 
+        if (player != null && !_chatManager.HandleRateLimit(player))
+            return;
+
         // It doesn't make any sense for a non-player to send in-game OOC messages, whereas non-players may be sending
         // in-game IC messages.
         if (player?.AttachedEntity is not { Valid: true } entity || source != entity)
@@ -330,7 +337,7 @@ public sealed partial class ChatSystem : SharedChatSystem
                 announcementSound = new SoundPathSpecifier(CentComAnnouncementSound); // Corvax-Announcements: Support custom alert sound from admin panel
             announcementSound ??= new SoundPathSpecifier(DefaultAnnouncementSound);
             var announcementFilename = announcementSound.GetSound();
-            var announcementEv = new AnnouncementSpokeEvent(Filter.Broadcast(), announcementFilename, announcementSound.Params, message);
+            var announcementEv = new AnnouncementSpokeEvent(Filter.Broadcast(), announcementFilename, AudioParams.Default.WithVolume(-2f), message);
             RaiseLocalEvent(announcementEv);
         }
         _adminLogger.Add(LogType.Chat, LogImpact.Low, $"Global station announcement from {sender}: {message}");
@@ -370,7 +377,7 @@ public sealed partial class ChatSystem : SharedChatSystem
         if (announcementSound != null || playDefaultSound) // Corvax-TTS
         {
             announcementSound ??= new SoundPathSpecifier(DefaultAnnouncementSound);
-            var announcementEv = new AnnouncementSpokeEvent(filter, announcementSound.GetSound(), announcementSound.Params, message);
+            var announcementEv = new AnnouncementSpokeEvent(filter, announcementSound.GetSound(), AudioParams.Default.WithVolume(-2f), message);
             RaiseLocalEvent(announcementEv);
         }
 
